@@ -5,6 +5,7 @@ public abstract class Personagem{
     protected String nome;
     protected int pontosVida;
     protected int maxPontosVida;
+    protected String origem;
     protected int ataque;
     protected int defesa;
     protected int nivel;
@@ -23,6 +24,10 @@ public abstract class Personagem{
 
     public String getNome() {
         return nome;
+    }
+
+    public String getOrigem(){
+        return origem;
     }
 
     public int getPontosVida(){
