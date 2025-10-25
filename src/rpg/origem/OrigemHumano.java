@@ -1,4 +1,4 @@
-package rpg.servivo;
+package rpg.origem;
 
 import java.utils.Collections;
 import java.util.List;

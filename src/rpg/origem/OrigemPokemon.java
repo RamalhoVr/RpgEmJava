@@ -1,4 +1,4 @@
-package rpg.servivo;
+package rpg.origem;
 
 import java.util.Arraylist;
 import java.util.Collections;

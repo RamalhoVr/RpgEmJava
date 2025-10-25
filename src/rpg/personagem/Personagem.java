@@ -1,4 +1,4 @@
-package rpg.servivo;
+package rpg.personagem;
 
 public abstract class Personagem{
 
@@ -45,7 +45,7 @@ public abstract class Personagem{
 
     public void receberDano(int dano){
         pontosVida -= dano;
-        if (pontosVida > 0) pontosVida = 0;
+        if (pontosVida < 0) pontosVida = 0;
     }
 
     public void curarVida(int cura){
@@ -62,4 +62,11 @@ public abstract class Personagem{
                 nome, nivel, pontosVida, maxPontosVida, ataque, defesa);
     }
 
+    @Override
+    public void recuperarVida() {
+        this.pontosVida += 5;
+        if (this.pontosVida > this.maxPontosVida) {
+            this.pontosVida = this.maxPontosVida; 
+        }
+    }
 }
