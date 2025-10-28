@@ -1,4 +1,6 @@
-public class Item implements Comparable<Item> {
+package rpg.item;
+
+public class Item implements Comparable<Item>, Cloneable {
 
     private String nome;
     private String descricao;
@@ -56,5 +58,14 @@ public class Item implements Comparable<Item> {
     @Override
     public String toString() {
         return nome + " (" + descricao + ") - Efeito: " + efeito + " | Quantidade: " + quantidade;
+    }
+
+    @Override
+    public Item clone() {
+        try {
+            return (Item) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return new Item(this.nome, this.descricao, this.efeito, this.quantidade);
+        }
     }
 }

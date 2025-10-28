@@ -1,7 +1,8 @@
 package rpg.origem;
 
-import java.util.Arraylist;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 public class OrigemPokemon implements Origem{
@@ -10,15 +11,15 @@ public class OrigemPokemon implements Origem{
     private final int bonusMagico;
 
     public OrigemPokemon() {
-        this(5, list.of("Ataque A Distância", "Utilização de Poderes"));
+        this(5, Arrays.asList("Ataque À Distância", "Utilização de Poderes"));
     }
 
     public OrigemPokemon(int bonusMagico, List<String> poderes){
         this.bonusMagico = bonusMagico;
-        this.poderes = new Arraylist<>(poderes);
+        this.poderes = new ArrayList<>(poderes);
     }
 
-        @Override
+    @Override
     public String getNome() {
         return "Pokemon";
     }
@@ -35,13 +36,11 @@ public class OrigemPokemon implements Origem{
 
     @Override
     public int modificarDefesaBase(int defesaBase) {
-        
         return defesaBase;
     }
 
     @Override
     public int modificarAtaqueBase(int ataqueBase) {
-       
         return ataqueBase;
     }
 

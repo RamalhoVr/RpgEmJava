@@ -1,6 +1,6 @@
 package rpg.origem;
 
-import java.utils.Collections;
+import java.util.Collections;
 import java.util.List;
 
 public class OrigemHumano implements Origem{
@@ -10,6 +10,9 @@ public class OrigemHumano implements Origem{
         this(2);
     }
 
+    public OrigemHumano(int bonusFisico){
+        this.bonusFisico = bonusFisico;
+    }
 
     @Override
     public String getNome(){
@@ -18,7 +21,7 @@ public class OrigemHumano implements Origem{
 
     @Override
     public String getDescricao(){
-        return "Humanos são versáteis e tem uma facilidade em acertar ataques"
+        return "Humanos são versáteis e tem uma facilidade em acertar ataques.";
     }
 
     @Override
