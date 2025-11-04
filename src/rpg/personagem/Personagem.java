@@ -6,7 +6,6 @@ import rpg.poderes.Poder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 public abstract class Personagem{
 
@@ -57,6 +56,7 @@ public abstract class Personagem{
     public String getOrigem(){ return origem; }
     public String getTipo(){ return tipo; }
     public int getPontosVida(){ return pontosVida; }
+    public int getMaxPontosVida(){ return maxPontosVida; }
     public int getAtaque(){ return ataque; }
     public int getDefesa(){ return defesa; }
     public int getNivel(){ return nivel; }
@@ -109,28 +109,7 @@ public abstract class Personagem{
         }
     }
 
-    // Combate por rolagem de dados conforme o enunciado
-    public boolean batalhar(Inimigo inimigo) {
-        Random rand = new Random();
-        while (this.pontosVida > 0 && inimigo.pontosVida > 0) {
-            int dadoJogador = rand.nextInt(6) + 1; // 1..6
-            int dadoInimigo = rand.nextInt(6) + 1;
-
-            int ataqueTotal = this.atacar() + dadoJogador;
-            int defesaInimigo = inimigo.defesa;
-            if (ataqueTotal > defesaInimigo) {
-                int dano = Math.max(1, ataqueTotal - defesaInimigo);
-                inimigo.receberDano(dano);
-            }
-
-            if (inimigo.pontosVida <= 0) break;
-
-            int ataqueInimigo = inimigo.atacar() + dadoInimigo;
-            if (ataqueInimigo > this.defesa) {
-                int dano = Math.max(1, ataqueInimigo - this.defesa);
-                this.receberDano(dano);
-            }
-        }
+    public boolean estaVivo() {
         return this.pontosVida > 0;
     }
 }
