@@ -1,10 +1,14 @@
 package rpg;
 
 import rpg.item.Item;
+import rpg.mapa.Mapa;
+import rpg.mapa.Local;
 import rpg.personagem.Inimigo;
 import rpg.personagem.Personagem;
 import rpg.util.TipoUtil;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -15,6 +19,7 @@ public class Jogo {
     private Random random;
     private int pistasEncontradas;
     private static final int PISTAS_PARA_RESGATE = 3;
+    private Mapa mapa;
 
     public Jogo(Personagem jogador, Personagem amigo) {
         this.jogador = jogador;
@@ -22,6 +27,7 @@ public class Jogo {
         this.scanner = new Scanner(System.in);
         this.random = new Random();
         this.pistasEncontradas = 0;
+        this.mapa = new Mapa();
     }
 
     public void iniciar() {
@@ -46,7 +52,10 @@ public class Jogo {
             System.out.println("1 - Explorar");
             System.out.println("2 - Ver Status");
             System.out.println("3 - Usar Item do Inventário");
-            System.out.println("4 - Sair do jogo");
+            System.out.println("4. 🗺️ Ver mapa completo");
+            System.out.println("5. 🚶 Viajar para outro local");
+            System.out.println("6. 🎯 Mapa compacto");
+            System.out.println("7 - Sair do jogo");
             System.out.print("\nEscolha: ");
 
             String escolha = scanner.nextLine().trim();
@@ -62,6 +71,15 @@ public class Jogo {
                     usarItem();
                     break;
                 case "4":
+                    mostrarMapa();
+                    break;
+                case "5":
+                    viajar();
+                    break;
+                case "6":
+                    mostrarMapaCompacto();
+                    break;
+                case "7":
                     System.out.println("\nVocê desistiu da jornada. Seu amigo continuará capturado...");
                     return;
                 default:
@@ -408,5 +426,180 @@ public class Jogo {
             System.out.println("\n✨ PARABÉNS! VOCÊ COMPLETOU O JOGO! ✨");
             System.out.println("==============================================");
         }
+    }
+
+    public void mostrarMapa() {
+        mapa.mostrarMapa();
+    }
+
+    public void mostrarMapaCompacto() {
+        System.out.println("\n🗺️ MAPA RÁPIDO:");
+        System.out.println("┌─[Torre]──[Ruínas]──[Floresta]──[Caverna]─┐");
+        System.out.println("│    │        │         │         │      │");
+        System.out.println("│ [Fort.]     │     [Entrada]     │      │");
+        System.out.println("│    │        │         │         │      │");
+        System.out.println("└─[Ponte]──[Campo]────[Lago]──[Pântano]───┘");
+        
+        String localAtual = mapa.getLocalAtual().getNome();
+        System.out.println("📍 Você está em: " + localAtual);
+    }
+
+    public void viajar() {
+        mapa.mostrarMapa();
+        System.out.println("\n🚶 Para onde deseja ir?");
+        
+        List<Local> conectados = mapa.getLocaisConectados();
+        
+        if (conectados.isEmpty()) {
+            System.out.println("Não há locais conectados!");
+            return;
+        }
+        
+        System.out.println("0. Cancelar viagem");
+        for (int i = 0; i < conectados.size(); i++) {
+            System.out.println((i + 1) + ". " + conectados.get(i).getNome());
+        }
+        
+        try {
+            int escolha = scanner.nextInt();
+            scanner.nextLine();
+            
+            if (escolha == 0) {
+                System.out.println("Viagem cancelada.");
+                return;
+            }
+            
+            if (escolha > 0 && escolha <= conectados.size()) {
+                Local destino = conectados.get(escolha - 1);
+                String nomeDestino = "";
+                
+                // Mapear nome do local para a chave do mapa
+                Map<String, String> mapeamento = Map.of(
+                    "Entrada da Floresta", "entrada",
+                    "Floresta Sombria", "floresta",
+                    "Caverna Misteriosa", "caverna",
+                    "Lago Cristalino", "lago",
+                    "Ruínas Antigas", "ruinas",
+                    "Pântano Venenoso", "pantano",
+                    "Campo de Flores", "campo",
+                    "Torre Abandonada", "torre",
+                    "Ponte de Pedra", "ponte",
+                    "Fortaleza do Chefe", "fortaleza"
+                );
+                
+                nomeDestino = mapeamento.get(destino.getNome());
+                
+                if (mapa.moverPara(nomeDestino)) {
+                    System.out.println("\n🚶 Você viajou para: " + destino.getNome());
+                    System.out.println("📖 " + destino.getDescricao());
+                    
+                    // Processar evento do local
+                    processarEventoLocal();
+                } else {
+                    System.out.println("❌ Não foi possível viajar para este local!");
+                }
+            } else {
+                System.out.println("❌ Opção inválida!");
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Entrada inválida!");
+            scanner.nextLine();
+        }
+    }
+
+    private void processarEventoLocal() {
+        Local localAtual = mapa.getLocalAtual();
+        String tipoEvento = localAtual.getTipoEvento();
+        
+        switch (tipoEvento) {
+            case "pista":
+                if (localAtual.temPista()) {
+                    System.out.println("\n🔍 Você encontrou uma pista sobre seu amigo!");
+                    localAtual.setPistaEncontrada();
+                    pistasEncontradas++;
+                    System.out.println("Total de pistas: " + pistasEncontradas + "/5");
+                } else {
+                    System.out.println("Este local já foi explorado completamente.");
+                }
+                break;
+                
+            case "combate":
+                if (localAtual.temInimigo()) {
+                    System.out.println("\n⚔️ Um inimigo aparece!");
+                    Inimigo inimigo = gerarInimigoAleatorio();
+                    batalhar(inimigo);
+                    if (jogador.getPontosVida() > 0) {
+                        localAtual.setInimigoVencido();
+                    }
+                } else {
+                    System.out.println("Este local está pacífico agora.");
+                }
+                break;
+                
+            case "item":
+                if (localAtual.temItem()) {
+                    System.out.println("\n💎 Você encontrou um item!");
+                    Item item = gerarItemAleatorio();
+                    jogador.getInventario().adicionarItem(item);
+                    System.out.println("Você encontrou: " + item.getNome());
+                    localAtual.setItemColetado();
+                } else {
+                    System.out.println("Não há mais itens neste local.");
+                }
+                break;
+                
+            case "armadilha":
+                System.out.println("\n💥 Você caiu em uma armadilha!");
+                int dano = random.nextInt(15) + 5;
+                jogador.receberDano(dano);
+                System.out.println("Você perdeu " + dano + " pontos de vida!");
+                break;
+                
+            case "chefe":
+                if (mapa.podeAcessarChefe()) {
+                    System.out.println("\n🏰 Você chegou na Fortaleza do Chefe!");
+                    System.out.println("Seu amigo está aqui! Prepare-se para a batalha final!");
+                    // Lógica da batalha final aqui
+                } else {
+                    System.out.println("\n🚫 A fortaleza está selada! Você precisa de mais pistas para entrar.");
+                    System.out.println("Volte quando tiver encontrado pelo menos 3 pistas.");
+                }
+                break;
+                
+            default:
+                System.out.println("Este é um local tranquilo para descansar.");
+                break;
+        }
+    }
+
+    private Inimigo gerarInimigoAleatorio() {
+        String[] tipos = {"água", "fogo", "planta", "pedra", "elétrico", "psíquico"};
+        String tipoAleatorio = tipos[random.nextInt(tipos.length)];
+        int nivelInimigo = Math.max(1, jogador.getNivel() + random.nextInt(3) - 1);
+        
+        String nomePokemon = gerarNomePokemonPorTipo(tipoAleatorio);
+        
+        return new Inimigo(nomePokemon,
+                           70 + nivelInimigo * 7,
+                           10 + nivelInimigo * 2,
+                           8 + nivelInimigo,
+                           nivelInimigo,
+                           tipoAleatorio);
+    }
+
+    private Item gerarItemAleatorio() {
+        String[] nomesItens = {"Poção de Cura", "Poção Maior", "Antídoto", "Reviver"};
+        String[] descricoes = {"Recupera vida", "Recupera muita vida", "Cura envenenamento", "Revive de KO"};
+        String[] efeitos = {"cura", "cura_maior", "antidoto", "reviver"};
+        
+        int indice = random.nextInt(nomesItens.length);
+        int quantidade = 1 + random.nextInt(3); // 1 a 3 itens
+        
+        return new Item(nomesItens[indice], descricoes[indice], efeitos[indice], quantidade);
+    }
+
+    // Método sobrecarregado para batalhar (sem segundo parâmetro)
+    private void batalhar(Inimigo inimigo) {
+        batalhar(inimigo, false);
     }
 }

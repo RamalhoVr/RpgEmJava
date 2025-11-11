@@ -186,7 +186,7 @@ public class Main {
                 if (numero >= min && numero <= max) {
                     return numero;
                 } else {
-                    System.out.print("Número fora do intervalo! Digite entre " + min + " e " + max + ": ");
+                    System.out.print("Número fora do intervalo! Digite um número entre " + min + " e " + max + ": ");
                 }
             } catch (NumberFormatException e) {
                 System.out.print("Entrada inválida! Digite um número entre " + min + " e " + max + ": ");
