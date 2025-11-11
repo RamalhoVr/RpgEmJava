@@ -73,6 +73,10 @@ public abstract class Personagem{
         if(pontosVida > maxPontosVida) pontosVida = maxPontosVida;
     }
 
+    public void curar(int cura){
+        curarVida(cura);
+    }
+
     public abstract int atacar();
 
     public boolean podeUsarPoder(Poder poder) {

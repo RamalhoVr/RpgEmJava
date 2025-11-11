@@ -1,7 +1,5 @@
 package rpg.mapa;
 
-import rpg.item.Item;
-import rpg.personagem.Inimigo;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,58 +7,75 @@ public class Local implements Cloneable {
     private String nome;
     private String descricao;
     private boolean visitado;
-    private List<String> conexoes; // Nomes dos locais conectados
-    private boolean temPista;
-    private boolean temInimigo;
-    private boolean temItem;
-    private String tipoEvento; // "combate", "item", "pista", "armadilha", "vazio"
+    private List<String> conexoes;
+    private List<Evento> eventos;
 
-    // Construtor completo
-    public Local(String nome, String descricao, String tipoEvento) {
+    public Local(String nome, String descricao) {
         this.nome = nome;
         this.descricao = descricao;
         this.visitado = false;
         this.conexoes = new ArrayList<>();
-        this.tipoEvento = tipoEvento;
-        this.temPista = tipoEvento.equals("pista");
-        this.temInimigo = tipoEvento.equals("combate");
-        this.temItem = tipoEvento.equals("item");
+        this.eventos = new ArrayList<>();
     }
 
-    // Construtor padrão
     public Local() {
-        this("Local Desconhecido", "Um lugar misterioso.", "vazio");
+        this("Local Desconhecido", "Um lugar misterioso.");
     }
 
-    // Construtor de cópia
     public Local(Local outro) {
         this.nome = outro.nome;
         this.descricao = outro.descricao;
         this.visitado = outro.visitado;
         this.conexoes = new ArrayList<>(outro.conexoes);
-        this.temPista = outro.temPista;
-        this.temInimigo = outro.temInimigo;
-        this.temItem = outro.temItem;
-        this.tipoEvento = outro.tipoEvento;
+        this.eventos = new ArrayList<>(outro.eventos);
     }
 
-    // Getters
-    public String getNome() { return nome; }
-    public String getDescricao() { return descricao; }
-    public boolean isVisitado() { return visitado; }
-    public List<String> getConexoes() { return new ArrayList<>(conexoes); }
-    public boolean temPista() { return temPista; }
-    public boolean temInimigo() { return temInimigo; }
-    public boolean temItem() { return temItem; }
-    public String getTipoEvento() { return tipoEvento; }
+    public void adicionarEvento(Evento evento) {
+        this.eventos.add(evento);
+    }
 
-    // Setters
-    public void setVisitado(boolean visitado) { this.visitado = visitado; }
-    public void setPistaEncontrada() { this.temPista = false; }
-    public void setInimigoVencido() { this.temInimigo = false; }
-    public void setItemColetado() { this.temItem = false; }
+    public String getNome() {
+        return nome;
+    }
 
-    // Adicionar conexão
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public boolean isVisitado() {
+        return visitado;
+    }
+
+    public List<String> getConexoes() {
+        return new ArrayList<>(conexoes);
+    }
+
+    public List<Evento> getEventos() {
+        return new ArrayList<>(eventos);
+    }
+    
+    public boolean temEventosPendentes() {
+        for (Evento e : eventos) {
+            if (!e.jaOcorreu()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public Evento getProximoEvento() {
+        for (Evento e : eventos) {
+            if (!e.jaOcorreu()) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    public void setVisitado(boolean visitado) {
+        this.visitado = visitado;
+    }
+
     public void adicionarConexao(String nomeLocal) {
         if (!conexoes.contains(nomeLocal)) {
             conexoes.add(nomeLocal);
@@ -75,11 +90,7 @@ public class Local implements Cloneable {
     @Override
     public String toString() {
         String status = visitado ? "[VISITADO]" : "[NOVO]";
-        String evento = "";
-        
-        if (temPista) evento += " 🔍";
-        if (temInimigo) evento += " ⚔️";
-        if (temItem) evento += " 💎";
+        String evento = temEventosPendentes() ? " [!]" : "";
         
         return String.format("%s %s%s - %s", status, nome, evento, descricao);
     }

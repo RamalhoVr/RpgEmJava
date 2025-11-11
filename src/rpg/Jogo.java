@@ -3,6 +3,7 @@ package rpg;
 import rpg.item.Item;
 import rpg.mapa.Mapa;
 import rpg.mapa.Local;
+import rpg.mapa.Evento;
 import rpg.personagem.Inimigo;
 import rpg.personagem.Personagem;
 import rpg.util.TipoUtil;
@@ -47,14 +48,15 @@ public class Jogo {
         while (jogador.estaVivo()) {
             System.out.println("\n==============================================");
             System.out.println("Pistas encontradas: " + pistasEncontradas + "/" + PISTAS_PARA_RESGATE);
+            System.out.println("Local atual: " + mapa.getLocalAtual().getNome());
             System.out.println("==============================================");
             System.out.println("O que deseja fazer?");
-            System.out.println("1 - Explorar");
+            System.out.println("1 - Explorar local atual");
             System.out.println("2 - Ver Status");
             System.out.println("3 - Usar Item do Inventário");
-            System.out.println("4. 🗺️ Ver mapa completo");
-            System.out.println("5. 🚶 Viajar para outro local");
-            System.out.println("6. 🎯 Mapa compacto");
+            System.out.println("4 - Ver mapa completo");
+            System.out.println("5 - Viajar para outro local");
+            System.out.println("6 - Mapa compacto");
             System.out.println("7 - Sair do jogo");
             System.out.print("\nEscolha: ");
 
@@ -62,7 +64,7 @@ public class Jogo {
 
             switch (escolha) {
                 case "1":
-                    explorar();
+                    explorarLocalAtual();
                     break;
                 case "2":
                     verStatus();
@@ -99,66 +101,6 @@ public class Jogo {
         System.out.println("Seu amigo " + amigo.getNome() + " continuará prisioneiro...");
     }
 
-    private void explorar() {
-        System.out.println("\n----------------------------------------------");
-        System.out.println("Você está explorando...");
-        System.out.println("----------------------------------------------");
-
-        int evento = random.nextInt(100);
-
-        if (evento < 20) {
-            // 20% - Encontro com membro da Equipe Rocket
-            encontroComRocket();
-        } else if (evento < 50) {
-            // 30% - Pokémon selvagem
-            encontroComPokemonSelvagem();
-        } else if (evento < 70) {
-            // 20% - Encontrou uma pista!
-            encontrarPista();
-        } else if (evento < 95) {
-            // 25% - Encontrou um item!
-            encontrarItem();
-        } else {
-            // 5% - Armadilha!
-            armadilha();
-        }
-    }
-
-    private void encontroComRocket() {
-        System.out.println("\n⚠️  Um membro da Equipe Rocket apareceu!");
-        
-        int nivelInimigo = jogador.getNivel() + random.nextInt(3);
-        Inimigo rocket = new Inimigo("Rocket " + random.nextInt(100), 
-                                     80 + nivelInimigo * 8,
-                                     12 + nivelInimigo * 2,
-                                     8 + nivelInimigo,
-                                     nivelInimigo);
-        
-        System.out.println(rocket.getNome() + " desafia você para a batalha!");
-        batalhar(rocket, true);
-    }
-
-    private void encontroComPokemonSelvagem() {
-        System.out.println("\n🐾 Um Pokémon selvagem apareceu!");
-        
-        // Criar um inimigo baseado em um tipo aleatório de Pokémon
-        String[] tipos = {"água", "fogo", "planta", "pedra", "elétrico", "psíquico"};
-        String tipoAleatorio = tipos[random.nextInt(tipos.length)];
-        int nivelInimigo = Math.max(1, jogador.getNivel() + random.nextInt(3) - 1);
-        
-        String nomePokemon = gerarNomePokemonPorTipo(tipoAleatorio);
-        
-        Inimigo pokemonSelvagem = new Inimigo(nomePokemon,
-                                               70 + nivelInimigo * 7,
-                                               10 + nivelInimigo * 2,
-                                               8 + nivelInimigo,
-                                               nivelInimigo,
-                                               tipoAleatorio);
-        
-        System.out.println(pokemonSelvagem.getNome() + " (" + tipoAleatorio + ") quer lutar!");
-        batalhar(pokemonSelvagem, false);
-    }
-
     private String gerarNomePokemonPorTipo(String tipo) {
         String[][] nomes = {
             {"Squirtle", "Vaporeon", "Gyarados"},      // água
@@ -183,29 +125,68 @@ public class Jogo {
     }
 
     private void batalhar(Inimigo inimigo, boolean isRocket) {
-        System.out.println("\n⚔️  BATALHA INICIADA!");
+        System.out.println("\n*** BATALHA INICIADA! ***");
         System.out.println("Você: " + jogador.toString());
         System.out.println("Inimigo: " + inimigo.toString());
         
         while (jogador.estaVivo() && inimigo.estaVivo()) {
             System.out.println("\n--- Seu turno ---");
             System.out.println("1 - Atacar");
-            System.out.println("2 - Tentar Fugir");
+            System.out.println("2 - Ver Inventário");
+            System.out.println("3 - Usar Item");
+            System.out.println("4 - Tentar Fugir");
             System.out.print("Escolha: ");
             
             String acao = scanner.nextLine().trim();
             
-            if (acao.equals("2")) {
-                // Tentar fugir (com chance de falha)
-                if (tentarFugir()) {
-                    System.out.println("\n🏃 Você conseguiu fugir!");
-                    return;
-                } else {
-                    System.out.println("\n❌ Você não conseguiu fugir!");
-                }
-            } else {
-                // Atacar
-                turnoAtaque(jogador, inimigo);
+            boolean usouTurno = false; // Controla se o jogador usou o turno
+            
+            switch (acao) {
+                case "1":
+                    // Atacar
+                    turnoAtaque(jogador, inimigo);
+                    usouTurno = true;
+                    break;
+                    
+                case "2":
+                    // Ver inventário (não consome turno)
+                    System.out.println("\n=== INVENTÁRIO ===");
+                    if (jogador.getInventario().listarItensOrdenados().isEmpty()) {
+                        System.out.println("(vazio)");
+                    } else {
+                        for (Item item : jogador.getInventario().listarItensOrdenados()) {
+                            System.out.println("  - " + item.toString());
+                        }
+                    }
+                    continue; // Volta para o menu sem consumir turno
+                    
+                case "3":
+                    // Usar item (consome turno)
+                    if (usarItemBatalha()) {
+                        usouTurno = true;
+                    } else {
+                        continue; // Se não usou item, volta para o menu
+                    }
+                    break;
+                    
+                case "4":
+                    // Tentar fugir (consome turno)
+                    if (tentarFugir()) {
+                        System.out.println("\nVocê conseguiu fugir!");
+                        return;
+                    } else {
+                        System.out.println("\nVocê não conseguiu fugir!");
+                        usouTurno = true;
+                    }
+                    break;
+                    
+                default:
+                    System.out.println("\nOpção inválida!");
+                    continue; // Volta para o menu sem consumir turno
+            }
+            
+            if (!usouTurno) {
+                continue; // Se não usou o turno, volta para o menu
             }
             
             if (!inimigo.estaVivo()) {
@@ -244,15 +225,15 @@ public class Jogo {
             int danoFinal = (int) Math.ceil(danoBase * multiplicador);
             
             if (multiplicador > 1.0) {
-                System.out.println("🔥 É SUPER EFETIVO! (multiplicador: " + multiplicador + "x)");
+                System.out.println(">>> É SUPER EFETIVO! (multiplicador: " + multiplicador + "x)");
             } else if (multiplicador < 1.0) {
-                System.out.println("🛡️  Não é muito efetivo... (multiplicador: " + multiplicador + "x)");
+                System.out.println(">>> Não é muito efetivo... (multiplicador: " + multiplicador + "x)");
             }
             
             defensor.receberDano(danoFinal);
             System.out.println(atacante.getNome() + " causou " + danoFinal + " de dano!");
         } else {
-            System.out.println("❌ O ataque não foi forte o suficiente para passar pela defesa!");
+            System.out.println("X O ataque não foi forte o suficiente para passar pela defesa!");
         }
     }
 
@@ -262,12 +243,12 @@ public class Jogo {
     }
 
     private void vitoria(Inimigo inimigo, boolean isRocket) {
-        System.out.println("\n🎉 VITÓRIA!");
+        System.out.println("\n*** VITÓRIA! ***");
         System.out.println("Você derrotou " + inimigo.getNome() + "!");
         
         // Saquear inventário do inimigo (clonando itens)
         if (!inimigo.getInventario().listarItensOrdenados().isEmpty()) {
-            System.out.println("\n💰 Você saqueou o inventário do inimigo!");
+            System.out.println("\n[SAQUE] Você saqueou o inventário do inimigo!");
             for (Item item : inimigo.getInventario().listarItensOrdenados()) {
                 // Clonar apenas parte dos itens (metade)
                 int qtdSaqueada = Math.max(1, item.getQuantidade() / 2);
@@ -281,42 +262,12 @@ public class Jogo {
         // Se derrotou um Rocket, pode encontrar pista
         if (isRocket && random.nextInt(100) < 60) {
             pistasEncontradas++;
-            System.out.println("\n🔍 Você encontrou uma PISTA sobre seu amigo!");
+            System.out.println("\n[PISTA] Você encontrou uma PISTA sobre seu amigo!");
             System.out.println("Pistas: " + pistasEncontradas + "/" + PISTAS_PARA_RESGATE);
         }
         
         jogador.recuperarVida();
         System.out.println("\nVocê recuperou um pouco de vida após a batalha.");
-    }
-
-    private void encontrarPista() {
-        pistasEncontradas++;
-        System.out.println("\n🔍 Você encontrou uma PISTA sobre o paradeiro do seu amigo!");
-        System.out.println("Pistas: " + pistasEncontradas + "/" + PISTAS_PARA_RESGATE);
-    }
-
-    private void encontrarItem() {
-        // Itens aleatórios
-        String[] nomesItens = {"Poção de Cura", "Poção Maior", "Antídoto", "Reviver"};
-        String[] descricoes = {"Recupera vida", "Recupera muita vida", "Cura envenenamento", "Revive de KO"};
-        String[] efeitos = {"cura", "cura_maior", "antidoto", "reviver"};
-        
-        int indice = random.nextInt(nomesItens.length);
-        int quantidade = 2 + random.nextInt(4); // 2 a 5 itens
-        
-        Item item = new Item(nomesItens[indice], descricoes[indice], efeitos[indice], quantidade);
-        jogador.getInventario().adicionarItem(item);
-        
-        System.out.println("\n🎁 Você encontrou: " + item.getNome() + " x" + quantidade + "!");
-    }
-
-    private void armadilha() {
-        System.out.println("\n💥 ARMADILHA!");
-        int dado = random.nextInt(6) + 1;
-        int dano = 5 + dado;
-        jogador.receberDano(dano);
-        System.out.println("Você caiu em uma armadilha e perdeu " + dano + " pontos de vida!");
-        System.out.println("Vida restante: " + jogador.getPontosVida() + "/" + jogador.getMaxPontosVida());
     }
 
     private void verStatus() {
@@ -377,16 +328,58 @@ public class Jogo {
         switch (item.getEfeito().toLowerCase()) {
             case "cura":
                 jogador.curarVida(20);
-                System.out.println("\n✨ Você usou " + item.getNome() + " e recuperou 20 pontos de vida!");
+                System.out.println("\n[ITEM] Você usou " + item.getNome() + " e recuperou 20 pontos de vida!");
                 break;
             case "cura_maior":
                 jogador.curarVida(50);
-                System.out.println("\n✨ Você usou " + item.getNome() + " e recuperou 50 pontos de vida!");
+                System.out.println("\n[ITEM] Você usou " + item.getNome() + " e recuperou 50 pontos de vida!");
                 break;
             default:
-                System.out.println("\n✨ Você usou " + item.getNome() + "!");
+                System.out.println("\n[ITEM] Você usou " + item.getNome() + "!");
         }
         System.out.println("Vida atual: " + jogador.getPontosVida() + "/" + jogador.getMaxPontosVida());
+    }
+
+    private boolean usarItemBatalha() {
+        if (jogador.getInventario().listarItensOrdenados().isEmpty()) {
+            System.out.println("\nSeu inventário está vazio!");
+            System.out.println("Pressione ENTER para continuar...");
+            scanner.nextLine();
+            return false; // Não usou turno
+        }
+        
+        System.out.println("\n=== USAR ITEM ===");
+        int i = 1;
+        for (Item item : jogador.getInventario().listarItensOrdenados()) {
+            System.out.println(i + " - " + item.toString());
+            i++;
+        }
+        System.out.println("0 - Cancelar");
+        System.out.print("\nEscolha um item para usar: ");
+        
+        try {
+            int escolha = Integer.parseInt(scanner.nextLine().trim());
+            if (escolha == 0) {
+                return false; // Cancelou, não usa turno
+            }
+            if (escolha < 1 || escolha > jogador.getInventario().listarItensOrdenados().size()) {
+                System.out.println("Opção inválida!");
+                System.out.println("Pressione ENTER para continuar...");
+                scanner.nextLine();
+                return false; // Não usou turno
+            }
+            
+            Item item = jogador.getInventario().listarItensOrdenados().get(escolha - 1);
+            aplicarEfeitoItem(item);
+            jogador.getInventario().removerItem(item);
+            return true; // Usou o item, consome turno
+            
+        } catch (NumberFormatException e) {
+            System.out.println("Entrada inválida!");
+            System.out.println("Pressione ENTER para continuar...");
+            scanner.nextLine();
+            return false; // Não usou turno
+        }
     }
 
     private void batalhaFinal() {
@@ -410,20 +403,20 @@ public class Jogo {
         chefe.getInventario().adicionarItem(new Item("Poção Rara", "Poção especial", "cura_maior", 2));
         chefe.getInventario().adicionarItem(new Item("Antídoto Raro", "Antídoto especial", "antidoto", 1));
         
-        System.out.println("\n⚔️  BATALHA FINAL!");
+        System.out.println("\n*** BATALHA FINAL! ***");
         System.out.println("Giovanni: 'Você chegou longe, mas não vai levar seu amigo!'");
         
         batalhar(chefe, true);
         
         if (jogador.estaVivo()) {
             System.out.println("\n\n==============================================");
-            System.out.println("           🎊 VOCÊ VENCEU! 🎊");
+            System.out.println("           *** VOCÊ VENCEU! ***");
             System.out.println("==============================================");
             System.out.println("\nGiovanni foi derrotado!");
             System.out.println("Você libertou " + amigo.getNome() + "!");
             System.out.println("\nSeu amigo: 'Obrigado por me salvar!'");
             System.out.println("\nVocês voltam para casa juntos e em segurança.");
-            System.out.println("\n✨ PARABÉNS! VOCÊ COMPLETOU O JOGO! ✨");
+            System.out.println("\n*** PARABÉNS! VOCÊ COMPLETOU O JOGO! ***");
             System.out.println("==============================================");
         }
     }
@@ -433,20 +426,20 @@ public class Jogo {
     }
 
     public void mostrarMapaCompacto() {
-        System.out.println("\n🗺️ MAPA RÁPIDO:");
+        System.out.println("\n[MAPA RÁPIDO]:");
         System.out.println("┌─[Torre]──[Ruínas]──[Floresta]──[Caverna]─┐");
-        System.out.println("│    │        │         │         │      │");
-        System.out.println("│ [Fort.]     │     [Entrada]     │      │");
-        System.out.println("│    │        │         │         │      │");
-        System.out.println("└─[Ponte]──[Campo]────[Lago]──[Pântano]───┘");
+        System.out.println("│    │        │         │         │        │");
+        System.out.println("│ [Fort.]     │     [Entrada]     │        │");
+        System.out.println("│    │        │         │         │        │");
+        System.out.println("└─[Ponte]──[Campo]────[Lago]──[Pântano]────┘");
         
         String localAtual = mapa.getLocalAtual().getNome();
-        System.out.println("📍 Você está em: " + localAtual);
+        System.out.println(">> Você está em: " + localAtual);
     }
 
     public void viajar() {
         mapa.mostrarMapa();
-        System.out.println("\n🚶 Para onde deseja ir?");
+        System.out.println("\n>> Para onde deseja ir?");
         
         List<Local> conectados = mapa.getLocaisConectados();
         
@@ -490,84 +483,126 @@ public class Jogo {
                 nomeDestino = mapeamento.get(destino.getNome());
                 
                 if (mapa.moverPara(nomeDestino)) {
-                    System.out.println("\n🚶 Você viajou para: " + destino.getNome());
-                    System.out.println("📖 " + destino.getDescricao());
-                    
-                    // Processar evento do local
-                    processarEventoLocal();
+                    System.out.println("\n>> Você viajou para: " + destino.getNome());
+                    System.out.println("Descrição: " + destino.getDescricao());
+                    System.out.println("\n[DICA] Use a opção '1 - Explorar local atual' para investigar este lugar!");
                 } else {
-                    System.out.println("❌ Não foi possível viajar para este local!");
+                    System.out.println("X Não foi possível viajar para este local!");
                 }
             } else {
-                System.out.println("❌ Opção inválida!");
+                System.out.println("X Opção inválida!");
             }
         } catch (Exception e) {
-            System.out.println("❌ Entrada inválida!");
+            System.out.println("X Entrada inválida!");
             scanner.nextLine();
         }
     }
 
-    private void processarEventoLocal() {
+    private void explorarLocalAtual() {
         Local localAtual = mapa.getLocalAtual();
-        String tipoEvento = localAtual.getTipoEvento();
         
-        switch (tipoEvento) {
+        System.out.println("\n[EXPLORANDO]: " + localAtual.getNome());
+        System.out.println("Descrição: " + localAtual.getDescricao());
+        
+        // Verifica se há eventos pendentes neste local
+        if (!localAtual.temEventosPendentes()) {
+            System.out.println("\n[OK] Você já explorou este local completamente.");
+            System.out.println("[DICA] Viaje para outros locais para continuar sua jornada!");
+            return;
+        }
+        
+        // Pega o próximo evento disponível
+        Evento evento = localAtual.getProximoEvento();
+        if (evento == null) {
+            System.out.println("\nEste local está calmo no momento.");
+            return;
+        }
+        
+        // Exibe a descrição do evento
+        System.out.println("\n" + evento.getDescricao());
+        System.out.println(">> " + evento.getDetalhes());
+        
+        // Processa o evento baseado no tipo
+        String tipo = evento.getTipo();
+        switch (tipo) {
             case "pista":
-                if (localAtual.temPista()) {
-                    System.out.println("\n🔍 Você encontrou uma pista sobre seu amigo!");
-                    localAtual.setPistaEncontrada();
-                    pistasEncontradas++;
-                    System.out.println("Total de pistas: " + pistasEncontradas + "/5");
-                } else {
-                    System.out.println("Este local já foi explorado completamente.");
+                System.out.println("\n*** PISTA ENCONTRADA! ***");
+                evento.marcarComoOcorrido();
+                pistasEncontradas++;
+                System.out.println("Total de pistas: " + pistasEncontradas + "/" + PISTAS_PARA_RESGATE);
+                if (pistasEncontradas >= PISTAS_PARA_RESGATE) {
+                    System.out.println("\n[DESBLOQUEADO] Você coletou pistas suficientes! A Fortaleza do Chefe está acessível!");
                 }
                 break;
                 
             case "combate":
-                if (localAtual.temInimigo()) {
-                    System.out.println("\n⚔️ Um inimigo aparece!");
-                    Inimigo inimigo = gerarInimigoAleatorio();
-                    batalhar(inimigo);
-                    if (jogador.getPontosVida() > 0) {
-                        localAtual.setInimigoVencido();
+                System.out.println("\n*** BATALHA! ***");
+                Inimigo inimigo = gerarInimigoAleatorio();
+                batalhar(inimigo);
+                if (jogador.estaVivo()) {
+                    evento.marcarComoOcorrido();
+                    // 25% de chance de dropar um item após vitória
+                    if (random.nextInt(100) < 25) {
+                        System.out.println("\n[DROP] O inimigo deixou cair um item!");
+                        Item item = gerarItemAleatorio();
+                        jogador.getInventario().adicionarItem(item);
+                        System.out.println("Você ganhou: " + item.toString());
                     }
-                } else {
-                    System.out.println("Este local está pacífico agora.");
                 }
                 break;
                 
             case "item":
-                if (localAtual.temItem()) {
-                    System.out.println("\n💎 Você encontrou um item!");
-                    Item item = gerarItemAleatorio();
-                    jogador.getInventario().adicionarItem(item);
-                    System.out.println("Você encontrou: " + item.getNome());
-                    localAtual.setItemColetado();
-                } else {
-                    System.out.println("Não há mais itens neste local.");
-                }
+                System.out.println("\n[ITEM] ITEM ENCONTRADO!");
+                Item item = gerarItemAleatorio();
+                jogador.getInventario().adicionarItem(item);
+                System.out.println("Você encontrou: " + item.toString());
+                evento.marcarComoOcorrido();
                 break;
                 
             case "armadilha":
-                System.out.println("\n💥 Você caiu em uma armadilha!");
+                System.out.println("\n[!] ARMADILHA!");
                 int dano = random.nextInt(15) + 5;
                 jogador.receberDano(dano);
-                System.out.println("Você perdeu " + dano + " pontos de vida!");
+                System.out.println(">> Você perdeu " + dano + " pontos de vida!");
+                System.out.println("HP atual: " + jogador.getPontosVida() + "/" + jogador.getMaxPontosVida());
+                evento.marcarComoOcorrido();
                 break;
                 
             case "chefe":
                 if (mapa.podeAcessarChefe()) {
-                    System.out.println("\n🏰 Você chegou na Fortaleza do Chefe!");
+                    System.out.println("\n===== BATALHA FINAL =====");
                     System.out.println("Seu amigo está aqui! Prepare-se para a batalha final!");
-                    // Lógica da batalha final aqui
+                    batalhaFinal();
                 } else {
-                    System.out.println("\n🚫 A fortaleza está selada! Você precisa de mais pistas para entrar.");
-                    System.out.println("Volte quando tiver encontrado pelo menos 3 pistas.");
+                    System.out.println("\n[BLOQUEADO] A fortaleza está selada!");
+                    System.out.println("Você precisa de " + PISTAS_PARA_RESGATE + " pistas para entrar.");
+                    System.out.println("Pistas atuais: " + pistasEncontradas + "/" + PISTAS_PARA_RESGATE);
                 }
                 break;
                 
+            case "dialogo":
+                System.out.println("\n[ENCONTRO]");
+                evento.marcarComoOcorrido();
+                // Alguns diálogos podem dar benefícios
+                if (evento.getDetalhes().contains("HP") || evento.getDetalhes().contains("cura")) {
+                    int cura = 20;
+                    jogador.curar(cura);
+                    System.out.println("HP: Você recuperou " + cura + " pontos de vida!");
+                }
+                break;
+                
+            case "descanso":
+                System.out.println("\n[DESCANSO] LOCAL DE DESCANSO");
+                int cura = 30;
+                jogador.curar(cura);
+                System.out.println("HP: Você descansou e recuperou " + cura + " pontos de vida!");
+                System.out.println("HP atual: " + jogador.getPontosVida() + "/" + jogador.getMaxPontosVida());
+                evento.marcarComoOcorrido();
+                break;
+                
             default:
-                System.out.println("Este é um local tranquilo para descansar.");
+                System.out.println("\nNada de especial acontece aqui.");
+                evento.marcarComoOcorrido();
                 break;
         }
     }
