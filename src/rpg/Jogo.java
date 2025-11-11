@@ -14,7 +14,7 @@ public class Jogo {
     private Scanner scanner;
     private Random random;
     private int pistasEncontradas;
-    private static final int PISTAS_PARA_RESGATE = 5;
+    private static final int PISTAS_PARA_RESGATE = 3;
 
     public Jogo(Personagem jogador, Personagem amigo) {
         this.jogador = jogador;
@@ -88,17 +88,17 @@ public class Jogo {
 
         int evento = random.nextInt(100);
 
-        if (evento < 40) {
-            // 40% - Encontro com membro da Equipe Rocket
+        if (evento < 20) {
+            // 20% - Encontro com membro da Equipe Rocket
             encontroComRocket();
-        } else if (evento < 70) {
+        } else if (evento < 50) {
             // 30% - Pokémon selvagem
             encontroComPokemonSelvagem();
-        } else if (evento < 85) {
-            // 15% - Encontrou uma pista!
+        } else if (evento < 70) {
+            // 20% - Encontrou uma pista!
             encontrarPista();
         } else if (evento < 95) {
-            // 10% - Encontrou um item!
+            // 25% - Encontrou um item!
             encontrarItem();
         } else {
             // 5% - Armadilha!
@@ -284,7 +284,7 @@ public class Jogo {
         String[] efeitos = {"cura", "cura_maior", "antidoto", "reviver"};
         
         int indice = random.nextInt(nomesItens.length);
-        int quantidade = 1 + random.nextInt(3);
+        int quantidade = 2 + random.nextInt(4); // 2 a 5 itens
         
         Item item = new Item(nomesItens[indice], descricoes[indice], efeitos[indice], quantidade);
         jogador.getInventario().adicionarItem(item);
