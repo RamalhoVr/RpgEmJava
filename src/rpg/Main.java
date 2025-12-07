@@ -2,13 +2,69 @@ package rpg;
 
 import rpg.personagem.*;
 import rpg.personagem.pokemon.*;
+import rpg.ui.TelaCriacaoPersonagem;
+import rpg.ui.JogoUI;
 
+import javax.swing.*;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
+        // Detectar se quer usar GUI ou modo texto
+        // Por padrão, usar GUI
+        boolean usarGUI = true;
+        
+        // Verificar argumentos da linha de comando
+        if (args.length > 0 && args[0].equals("--texto")) {
+            usarGUI = false;
+        }
+        
+        if (usarGUI) {
+            iniciarModoGrafico();
+        } else {
+            iniciarModoTexto(args);
+        }
+    }
+    
+    /**
+     * Inicia o jogo em modo gráfico (Swing)
+     */
+    private static void iniciarModoGrafico() {
+        // Configurar look and feel do sistema operacional
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            // Se falhar, usa o padrão do Java
+        }
+        
+        // Executar na thread de eventos do Swing
+        SwingUtilities.invokeLater(() -> {
+            // Mostrar tela de criação de personagem
+            TelaCriacaoPersonagem telaCriacao = new TelaCriacaoPersonagem(null);
+            telaCriacao.setVisible(true);
+            
+            // Se o jogador criou os personagens, iniciar o jogo
+            if (telaCriacao.criouPersonagem()) {
+                Personagem jogador = telaCriacao.getJogador();
+                Personagem amigo = telaCriacao.getAmigo();
+                
+                // Criar e mostrar a janela principal do jogo
+                JogoUI jogoUI = new JogoUI(jogador, amigo);
+                jogoUI.setVisible(true);
+            } else {
+                // Jogador cancelou, encerrar
+                System.out.println("Jogo cancelado pelo jogador.");
+                System.exit(0);
+            }
+        });
+    }
+    
+    /**
+     * Inicia o jogo em modo texto (original)
+     */
+    private static void iniciarModoTexto(String[] args) {
         Scanner scanner = new Scanner(System.in);
         Random random = new Random();
         
