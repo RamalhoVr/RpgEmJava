@@ -5,8 +5,6 @@ import rpg.personagem.pokemon.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
-import java.util.Random;
 
 /**
  * Tela de criação de personagem com interface gráfica.
@@ -17,18 +15,16 @@ public class TelaCriacaoPersonagem extends JDialog {
     private Personagem amigoCriado;
     private boolean criouPersonagem = false;
     
-    private JTextField txtNomeJogador;
-    private JTextField txtNomeAmigo;
     private JComboBox<String> comboTipoJogador;
     private JComboBox<String> comboTipoAmigo;
-    private JComboBox<String> comboClasseJogador;
-    private JComboBox<String> comboClasseAmigo;
+    private JComboBox<String> comboPersonagemJogador;
+    private JComboBox<String> comboPersonagemAmigo;
     private JTextArea areaDescricao;
     
     public TelaCriacaoPersonagem(Frame parent) {
         super(parent, "Criação de Personagem", true);
         
-        setSize(700, 600);
+        setSize(700, 500);
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout(10, 10));
         
@@ -61,12 +57,12 @@ public class TelaCriacaoPersonagem extends JDialog {
         // Área de descrição
         JPanel painelDescricao = new JPanel(new BorderLayout());
         painelDescricao.setBorder(BorderFactory.createTitledBorder("Informações"));
-        areaDescricao = new JTextArea(5, 40);
+        areaDescricao = new JTextArea(4, 40);
         areaDescricao.setEditable(false);
         areaDescricao.setLineWrap(true);
         areaDescricao.setWrapStyleWord(true);
         areaDescricao.setFont(new Font("Arial", Font.PLAIN, 12));
-        areaDescricao.setText("Escolha o tipo e classe do seu personagem e do seu amigo.");
+        areaDescricao.setText("Escolha o tipo e personagem do jogador e do amigo.");
         JScrollPane scrollDesc = new JScrollPane(areaDescricao);
         painelDescricao.add(scrollDesc, BorderLayout.CENTER);
         painelPrincipal.add(painelDescricao, BorderLayout.SOUTH);
@@ -98,22 +94,8 @@ public class TelaCriacaoPersonagem extends JDialog {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         
-        // Nome
-        gbc.gridx = 0; gbc.gridy = 0;
-        painel.add(new JLabel("Nome:"), gbc);
-        
-        gbc.gridx = 1;
-        JTextField txtNome = new JTextField(20);
-        painel.add(txtNome, gbc);
-        
-        if (isJogador) {
-            txtNomeJogador = txtNome;
-        } else {
-            txtNomeAmigo = txtNome;
-        }
-        
         // Tipo (Humano ou Pokémon)
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0; gbc.gridy = 0;
         painel.add(new JLabel("Tipo:"), gbc);
         
         gbc.gridx = 1;
@@ -127,126 +109,153 @@ public class TelaCriacaoPersonagem extends JDialog {
             comboTipoAmigo = comboTipo;
         }
         
-        // Classe/Espécie
-        gbc.gridx = 0; gbc.gridy = 2;
-        painel.add(new JLabel("Classe:"), gbc);
+        // Personagem (Guerreiro/Arqueiro ou Nome do Pokémon)
+        gbc.gridx = 0; gbc.gridy = 1;
+        JLabel labelPersonagem = new JLabel("Classe:");
+        painel.add(labelPersonagem, gbc);
         
         gbc.gridx = 1;
-        JComboBox<String> comboClasse = new JComboBox<>();
-        atualizarComboClasse(comboClasse, "Humano");
-        painel.add(comboClasse, gbc);
+        JComboBox<String> comboPersonagem = new JComboBox<>();
+        atualizarComboPersonagem(comboPersonagem, "Humano");
+        painel.add(comboPersonagem, gbc);
         
         if (isJogador) {
-            comboClasseJogador = comboClasse;
+            comboPersonagemJogador = comboPersonagem;
         } else {
-            comboClasseAmigo = comboClasse;
+            comboPersonagemAmigo = comboPersonagem;
         }
         
         // Listener para mudar as opções quando muda o tipo
         comboTipo.addActionListener(e -> {
             String tipoSelecionado = (String) comboTipo.getSelectedItem();
-            atualizarComboClasse(comboClasse, tipoSelecionado);
+            atualizarComboPersonagem(comboPersonagem, tipoSelecionado);
+            // Atualizar label
+            if ("Humano".equals(tipoSelecionado)) {
+                labelPersonagem.setText("Classe:");
+            } else {
+                labelPersonagem.setText("Pokémon:");
+            }
         });
         
         return painel;
     }
     
-    private void atualizarComboClasse(JComboBox<String> combo, String tipo) {
+    private void atualizarComboPersonagem(JComboBox<String> combo, String tipo) {
         combo.removeAllItems();
         
         if ("Humano".equals(tipo)) {
             combo.addItem("Guerreiro");
             combo.addItem("Arqueiro");
         } else {
-            combo.addItem("Água");
-            combo.addItem("Fogo");
-            combo.addItem("Planta");
-            combo.addItem("Pedra");
-            combo.addItem("Elétrico");
-            combo.addItem("Psíquico");
+            // Pokémons de Água
+            combo.addItem("Squirtle");
+            combo.addItem("Vaporeon");
+            combo.addItem("Gyarados");
+            
+            // Pokémons de Fogo
+            combo.addItem("Charmander");
+            combo.addItem("Flareon");
+            combo.addItem("Arcanine");
+            
+            // Pokémons de Planta
+            combo.addItem("Bulbasaur");
+            combo.addItem("Leafeon");
+            combo.addItem("Venusaur");
+            
+            // Pokémons de Pedra
+            combo.addItem("Onix");
+            combo.addItem("Geodude");
+            combo.addItem("Rhydon");
+            
+            // Pokémons de Elétrico
+            combo.addItem("Pikachu");
+            combo.addItem("Jolteon");
+            combo.addItem("Electabuzz");
+            
+            // Pokémons de Psíquico
+            combo.addItem("Abra");
+            combo.addItem("Espeon");
+            combo.addItem("Alakazam");
         }
     }
     
     private void criarPersonagens() {
-        // Validar nomes
-        String nomeJogador = txtNomeJogador.getText().trim();
-        String nomeAmigo = txtNomeAmigo.getText().trim();
-        
-        if (nomeJogador.isEmpty() || nomeAmigo.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Por favor, preencha os nomes dos personagens!",
-                "Erro",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        
         // Criar jogador
         String tipoJogador = (String) comboTipoJogador.getSelectedItem();
-        String classeJogador = (String) comboClasseJogador.getSelectedItem();
-        jogadorCriado = criarPersonagem(nomeJogador, tipoJogador, classeJogador);
+        String personagemJogador = (String) comboPersonagemJogador.getSelectedItem();
+        jogadorCriado = criarPersonagem(tipoJogador, personagemJogador);
         
         // Criar amigo
         String tipoAmigo = (String) comboTipoAmigo.getSelectedItem();
-        String classeAmigo = (String) comboClasseAmigo.getSelectedItem();
-        amigoCriado = criarPersonagem(nomeAmigo, tipoAmigo, classeAmigo);
+        String personagemAmigo = (String) comboPersonagemAmigo.getSelectedItem();
+        amigoCriado = criarPersonagem(tipoAmigo, personagemAmigo);
         
         criouPersonagem = true;
         dispose();
     }
     
-    private Personagem criarPersonagem(String nome, String tipo, String classe) {
+    private Personagem criarPersonagem(String tipo, String nomePersonagem) {
         if ("Humano".equals(tipo)) {
-            if ("Guerreiro".equals(classe)) {
-                return new Guerreiro(nome.isEmpty() ? "Guerreiro" : nome, 1);
+            if ("Guerreiro".equals(nomePersonagem)) {
+                return new Guerreiro("Guerreiro", 1);
             } else {
-                return new Arqueiro(nome.isEmpty() ? "Arqueiro" : nome, 1);
+                return new Arqueiro("Arqueiro", 1);
             }
         } else {
-            // Pokémon - criar diretamente baseado no tipo escolhido
-            String nomePokemon = nome.isEmpty() ? gerarNomePokemonPorTipo(classe) : nome;
-            int nivelInicial = 5;
+            // Pokémon - criar baseado no nome escolhido dos presets com níveis corretos
             
-            switch (classe) {
-                case "Água":
-                    return new PokemonAgua(nomePokemon, nivelInicial);
-                case "Fogo":
-                    return new PokemonFogo(nomePokemon, nivelInicial);
-                case "Planta":
-                    return new PokemonPlanta(nomePokemon, nivelInicial);
-                case "Pedra":
-                    return new PokemonPedra(nomePokemon, nivelInicial);
-                case "Elétrico":
-                    return new PokemonEletrico(nomePokemon, nivelInicial);
-                case "Psíquico":
-                    return new PokemonPsiquico(nomePokemon, nivelInicial);
-                default:
-                    return new PokemonAgua(nomePokemon, nivelInicial);
+            // Pokémons de Água
+            if ("Squirtle".equals(nomePersonagem)) {
+                return new PokemonAgua("Squirtle", 5);
+            } else if ("Vaporeon".equals(nomePersonagem)) {
+                return new PokemonAgua("Vaporeon", 15);
+            } else if ("Gyarados".equals(nomePersonagem)) {
+                return new PokemonAgua("Gyarados", 20);
             }
+            // Pokémons de Fogo
+            else if ("Charmander".equals(nomePersonagem)) {
+                return new PokemonFogo("Charmander", 5);
+            } else if ("Flareon".equals(nomePersonagem)) {
+                return new PokemonFogo("Flareon", 15);
+            } else if ("Arcanine".equals(nomePersonagem)) {
+                return new PokemonFogo("Arcanine", 20);
+            }
+            // Pokémons de Planta
+            else if ("Bulbasaur".equals(nomePersonagem)) {
+                return new PokemonPlanta("Bulbasaur", 5);
+            } else if ("Leafeon".equals(nomePersonagem)) {
+                return new PokemonPlanta("Leafeon", 15);
+            } else if ("Venusaur".equals(nomePersonagem)) {
+                return new PokemonPlanta("Venusaur", 20);
+            }
+            // Pokémons de Pedra
+            else if ("Onix".equals(nomePersonagem)) {
+                return new PokemonPedra("Onix", 5);
+            } else if ("Geodude".equals(nomePersonagem)) {
+                return new PokemonPedra("Geodude", 15);
+            } else if ("Rhydon".equals(nomePersonagem)) {
+                return new PokemonPedra("Rhydon", 20);
+            }
+            // Pokémons de Elétrico
+            else if ("Pikachu".equals(nomePersonagem)) {
+                return new PokemonEletrico("Pikachu", 5);
+            } else if ("Jolteon".equals(nomePersonagem)) {
+                return new PokemonEletrico("Jolteon", 15);
+            } else if ("Electabuzz".equals(nomePersonagem)) {
+                return new PokemonEletrico("Electabuzz", 20);
+            }
+            // Pokémons de Psíquico
+            else if ("Abra".equals(nomePersonagem)) {
+                return new PokemonPsiquico("Abra", 5);
+            } else if ("Espeon".equals(nomePersonagem)) {
+                return new PokemonPsiquico("Espeon", 15);
+            } else if ("Alakazam".equals(nomePersonagem)) {
+                return new PokemonPsiquico("Alakazam", 20);
+            }
+            
+            // Padrão
+            return new PokemonAgua("Squirtle", 5);
         }
-    }
-    
-    private String gerarNomePokemonPorTipo(String tipo) {
-        String[][] nomes = {
-            {"Squirtle", "Vaporeon", "Gyarados"},      // Água
-            {"Charmander", "Flareon", "Arcanine"},     // Fogo
-            {"Bulbasaur", "Leafeon", "Venusaur"},      // Planta
-            {"Onix", "Geodude", "Rhydon"},             // Pedra
-            {"Pikachu", "Jolteon", "Electabuzz"},      // Elétrico
-            {"Abra", "Espeon", "Alakazam"}             // Psíquico
-        };
-        
-        int indice = 0;
-        switch (tipo) {
-            case "Água": indice = 0; break;
-            case "Fogo": indice = 1; break;
-            case "Planta": indice = 2; break;
-            case "Pedra": indice = 3; break;
-            case "Elétrico": indice = 4; break;
-            case "Psíquico": indice = 5; break;
-        }
-        
-        Random random = new Random();
-        return nomes[indice][random.nextInt(nomes[indice].length)];
     }
     
     public boolean criouPersonagem() {
