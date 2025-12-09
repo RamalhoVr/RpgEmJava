@@ -29,6 +29,8 @@ public class JogoUI extends JFrame {
     private JLabel labelNivel;
     private JLabel labelPistas;
     private JProgressBar barraVida;
+    private MapaVisual mapaVisual;
+    private JDialog dialogoMapa;
     
     // Botões de ação
     private JButton btnExplorar;
@@ -305,10 +307,40 @@ public class JogoUI extends JFrame {
         ResultadoExploracao resultado = controller.explorar();
         adicionarTexto("\n" + resultado.mensagem);
         
-        if (resultado.tipo == ResultadoExploracao.TipoEvento.ROCKET ||
-            resultado.tipo == ResultadoExploracao.TipoEvento.POKEMON_SELVAGEM) {
-            // Iniciou batalha
-            iniciarBatalha(resultado.inimigo);
+        // Mostrar popups baseado no tipo de evento
+        switch (resultado.tipo) {
+            case PISTA:
+                NotificacaoPopup.mostrarInfo(
+                    this,
+                    "🔍 Pista Encontrada!",
+                    "Você descobriu informações valiosas!\n" +
+                    "Pistas: " + controller.getPistasEncontradas() + "/" + controller.getPistasNecessarias()
+                );
+                break;
+                
+            case ITEM:
+                if (resultado.item != null) {
+                    NotificacaoPopup.mostrarItemGanho(
+                        this,
+                        resultado.item.getNome(),
+                        resultado.item.getQuantidade()
+                    );
+                }
+                break;
+                
+            case ARMADILHA:
+                NotificacaoPopup.mostrarAlerta(
+                    this,
+                    "💥 Armadilha!",
+                    "Você caiu em uma armadilha e perdeu vida!"
+                );
+                break;
+                
+            case ROCKET:
+            case POKEMON_SELVAGEM:
+                // Iniciou batalha
+                iniciarBatalha(resultado.inimigo);
+                break;
         }
         
         atualizarStatus();
@@ -353,6 +385,22 @@ public class JogoUI extends JFrame {
                 if (turno.vitoria) {
                     ResultadoBatalha resultadoBatalha = controller.finalizarBatalhaVitoria();
                     adicionarTexto("\n" + resultadoBatalha.mensagem);
+                    
+                    // Mostrar itens ganhos com popups
+                    if (!resultadoBatalha.itensGanhos.isEmpty()) {
+                        for (Item item : resultadoBatalha.itensGanhos) {
+                            NotificacaoPopup.mostrarItemGanho(this, item.getNome(), item.getQuantidade());
+                        }
+                    }
+                    
+                    // Popup de vitória
+                    NotificacaoPopup.mostrarSucesso(
+                        this,
+                        "🎉 Vitória!",
+                        "Você derrotou " + inimigo.getNome() + "!\n" +
+                        "EXP ganho: " + resultadoBatalha.expGanha
+                    );
+                    
                     atualizarStatus();
                     break;
                 } else if (turno.derrota) {
@@ -374,6 +422,14 @@ public class JogoUI extends JFrame {
         btnViajar.setEnabled(true);
         btnMapa.setEnabled(true);
         atualizarStatus();
+        
+        // Reabrir mapa se estava navegando
+        if (dialogoMapa != null && !dialogoMapa.isVisible() && jogador.estaVivo()) {
+            SwingUtilities.invokeLater(() -> {
+                mapaVisual.atualizarEstadoNodes();
+                dialogoMapa.setVisible(true);
+            });
+        }
     }
     
     private void iniciarBatalhaFinal() {
@@ -471,6 +527,16 @@ public class JogoUI extends JFrame {
                 if (item.getNome().equals(nomeItem)) {
                     String resultado = controller.usarItem(item);
                     adicionarTexto("\n" + resultado);
+                    
+                    // Mostrar popup de uso do item
+                    if (resultado.contains("Recuperou") || resultado.contains("usou")) {
+                        NotificacaoPopup.mostrarInfo(
+                            this,
+                            "💊 Item Usado",
+                            resultado
+                        );
+                    }
+                    
                     atualizarStatus();
                     break;
                 }
@@ -479,22 +545,124 @@ public class JogoUI extends JFrame {
     }
     
     private void acaoMapa() {
-        limparTexto();
-        adicionarTexto("==============================================");
-        adicionarTexto("           MAPA DO MUNDO");
-        adicionarTexto("==============================================");
-        adicionarTexto("");
-        adicionarTexto("📍 Local atual: " + controller.getMapa().getLocalAtual().getNome());
-        adicionarTexto("");
-        adicionarTexto(controller.getMapa().toString());
-        adicionarTexto("");
-        adicionarTexto("==============================================");
+        mostrarMapaVisual();
+    }
+    
+    /**
+     * Mostra o mapa visual interativo em uma janela de diálogo
+     */
+    private void mostrarMapaVisual() {
+        if (dialogoMapa == null) {
+            dialogoMapa = new JDialog(this, "🗺️ Mapa do Mundo", false);
+            dialogoMapa.setSize(850, 700);
+            dialogoMapa.setLocationRelativeTo(this);
+            
+            mapaVisual = new MapaVisual(controller.getMapa());
+            mapaVisual.setLocalSelectionListener(chaveLocal -> {
+                viajarParaLocal(chaveLocal);
+            });
+            
+            JPanel painelMapa = new JPanel(new BorderLayout());
+            painelMapa.add(mapaVisual, BorderLayout.CENTER);
+            
+            // Painel de informações
+            JPanel painelInfo = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            painelInfo.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            JLabel labelInfo = new JLabel("💡 Clique em um local destacado para viajar até ele!");
+            labelInfo.setFont(new Font("Arial", Font.PLAIN, 12));
+            painelInfo.add(labelInfo);
+            
+            painelMapa.add(painelInfo, BorderLayout.SOUTH);
+            
+            dialogoMapa.add(painelMapa);
+        }
+        
+        // Atualizar o mapa antes de mostrar
+        mapaVisual.atualizarEstadoNodes();
+        dialogoMapa.setVisible(true);
+    }
+    
+    /**
+     * Viaja para um local específico
+     */
+    private void viajarParaLocal(String chaveLocal) {
+        if (controller.getMapa().moverPara(chaveLocal)) {
+            adicionarTexto("\n🚶 Você viajou para: " + controller.getMapa().getLocalAtual().getNome());
+            adicionarTexto("📖 " + controller.getMapa().getLocalAtual().getDescricao());
+            
+            // Atualizar mapa visual
+            mapaVisual.atualizarEstadoNodes();
+            
+            // Processar evento do local
+            processarEventoLocal();
+            
+            atualizarStatus();
+        } else {
+            JOptionPane.showMessageDialog(
+                dialogoMapa,
+                "Não é possível viajar para este local!",
+                "Erro ao Viajar",
+                JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+    
+    /**
+     * Processa eventos que ocorrem ao chegar em um local
+     */
+    private void processarEventoLocal() {
+        rpg.mapa.Local localAtual = controller.getMapa().getLocalAtual();
+        String tipoEvento = localAtual.getTipoEvento();
+        
+        // Auto-explorar o local ao chegar
+        adicionarTexto("\n--- Explorando o local ---");
+        ResultadoExploracao resultado = controller.explorar();
+        adicionarTexto(resultado.mensagem);
+        
+        // Processar resultado baseado no tipo
+        switch (resultado.tipo) {
+            case ROCKET, POKEMON_SELVAGEM:
+                // Pausar navegação e iniciar batalha
+                adicionarTexto("\n⚠️ Você precisa enfrentar este desafio antes de continuar!");
+                if (dialogoMapa != null) {
+                    dialogoMapa.setVisible(false);
+                }
+                iniciarBatalha(resultado.inimigo);
+                break;
+                
+            case PISTA:
+                NotificacaoPopup.mostrarInfo(
+                    this,
+                    "🔍 Pista Encontrada!",
+                    "Você descobriu informações sobre seu amigo!\n" +
+                    "Pistas: " + controller.getPistasEncontradas() + "/" + controller.getPistasNecessarias()
+                );
+                break;
+                
+            case ITEM:
+                if (resultado.item != null) {
+                    NotificacaoPopup.mostrarItemGanho(
+                        this,
+                        resultado.item.getNome(),
+                        resultado.item.getQuantidade()
+                    );
+                }
+                break;
+                
+            case ARMADILHA:
+                NotificacaoPopup.mostrarAlerta(
+                    this,
+                    "💥 Armadilha!",
+                    "Você caiu em uma armadilha e perdeu vida!"
+                );
+                break;
+        }
+        
+        atualizarStatus();
     }
     
     private void acaoViajar() {
-        adicionarTexto("\n--- Viajar ---");
-        adicionarTexto("🚧 Funcionalidade de viagem será implementada em breve.");
-        adicionarTexto("Por enquanto, você pode explorar o local atual!");
+        mostrarMapaVisual();
     }
     
     private void acaoSair() {
