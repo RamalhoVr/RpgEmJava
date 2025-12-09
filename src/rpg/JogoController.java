@@ -98,6 +98,7 @@ public class JogoController {
         public int expGanha;
         public List<Item> itensGanhos;
         public boolean jogadorMorreu;
+        public boolean subiuNivel;
         
         public ResultadoBatalha() {
             this.itensGanhos = new ArrayList<>();
@@ -146,7 +147,8 @@ public class JogoController {
     }
 
     private ResultadoExploracao encontroComRocket() {
-        int nivelInimigo = jogador.getNivel() + random.nextInt(3);
+        int nivelInimigo = jogador.getNivel() + random.nextInt(5) - 2; // -2 a +2
+        nivelInimigo = Math.max(1, nivelInimigo); // Mínimo nível 1
         inimigoAtual = new Inimigo("Rocket " + random.nextInt(100), 
                                     80 + nivelInimigo * 8,
                                     12 + nivelInimigo * 2,
@@ -166,9 +168,10 @@ public class JogoController {
     }
 
     private ResultadoExploracao encontroComPokemonSelvagem() {
-        String[] tipos = {"água", "fogo", "planta", "pedra", "elétrico", "psíquico"};
+        String[] tipos = {"\u00e1gua", "fogo", "planta", "pedra", "el\u00e9trico", "ps\u00edquico"};
         String tipoAleatorio = tipos[random.nextInt(tipos.length)];
-        int nivelInimigo = Math.max(1, jogador.getNivel() + random.nextInt(3) - 1);
+        int nivelInimigo = jogador.getNivel() + random.nextInt(5) - 2; // -2 a +2
+        nivelInimigo = Math.max(1, nivelInimigo); // Mínimo nível 1
         
         String nomePokemon = gerarNomePokemonPorTipo(tipoAleatorio);
         
@@ -279,6 +282,101 @@ public class JogoController {
     }
 
     // ========== Métodos de Batalha ==========
+    
+    /**
+     * Usa um poder do jogador na batalha
+     */
+    public ResultadoTurno usarPoder(rpg.poderes.Poder poder) {
+        if (!emBatalha || inimigoAtual == null) {
+            ResultadoTurno resultado = new ResultadoTurno("Não há batalha em andamento!");
+            resultado.batalhaTerminou = true;
+            return resultado;
+        }
+        
+        StringBuilder mensagem = new StringBuilder();
+        
+        // Turno do jogador usando poder
+        int dadoJogador = random.nextInt(6) + 1;
+        mensagem.append("✨ Você usou ").append(poder.getNome()).append("!\n");
+        mensagem.append("🎲 Você rolou um ").append(dadoJogador).append(" no dado!\n");
+        
+        // Poderes dão +5 de bônus ao ataque
+        int ataqueTotal = jogador.atacar() + dadoJogador + 5;
+        int defesaInimigo = inimigoAtual.getDefesa();
+        
+        mensagem.append("⚔️ Seu ataque: ").append(ataqueTotal)
+                .append(" vs Defesa inimiga: ").append(defesaInimigo).append("\n");
+        
+        int danoAoInimigo = 0;
+        if (ataqueTotal > defesaInimigo) {
+            double multiplicador = TipoUtil.calcularMultiplicador(jogador.getTipo(), inimigoAtual.getTipo());
+            danoAoInimigo = (int) ((ataqueTotal - defesaInimigo) * multiplicador);
+            inimigoAtual.receberDano(danoAoInimigo);
+            
+            mensagem.append("💥 ").append(inimigoAtual.getNome()).append(" recebeu ")
+                    .append(danoAoInimigo).append(" de dano!");
+            
+            if (multiplicador > 1.0) {
+                mensagem.append(" (Super efetivo! ×").append(multiplicador).append(")");
+            } else if (multiplicador < 1.0) {
+                mensagem.append(" (Pouco efetivo... ×").append(multiplicador).append(")");
+            }
+            mensagem.append("\n");
+        } else {
+            mensagem.append("🛡️ O inimigo defendeu!\n");
+        }
+        
+        // Verificar se o inimigo morreu
+        ResultadoTurno resultado = new ResultadoTurno(mensagem.toString());
+        resultado.danoInimigo = danoAoInimigo;
+        
+        if (!inimigoAtual.estaVivo()) {
+            resultado.batalhaTerminou = true;
+            resultado.vitoria = true;
+            return resultado;
+        }
+        
+        // Turno do inimigo
+        mensagem.append("\n--- Turno do inimigo ---\n");
+        int dadoInimigo = random.nextInt(6) + 1;
+        mensagem.append("🎲 ").append(inimigoAtual.getNome()).append(" rolou um ")
+                .append(dadoInimigo).append(" no dado!\n");
+        
+        int ataqueInimigo = inimigoAtual.atacar() + dadoInimigo;
+        int defesaJogador = jogador.getDefesa();
+        
+        mensagem.append("⚔️ Ataque inimigo: ").append(ataqueInimigo)
+                .append(" vs Sua defesa: ").append(defesaJogador).append("\n");
+        
+        int danoAoJogador = 0;
+        if (ataqueInimigo > defesaJogador) {
+            double multiplicador = TipoUtil.calcularMultiplicador(inimigoAtual.getTipo(), jogador.getTipo());
+            danoAoJogador = (int) ((ataqueInimigo - defesaJogador) * multiplicador);
+            jogador.receberDano(danoAoJogador);
+            
+            mensagem.append("💔 Você recebeu ").append(danoAoJogador).append(" de dano!");
+            
+            if (multiplicador > 1.0) {
+                mensagem.append(" (Super efetivo! ×").append(multiplicador).append(")");
+            } else if (multiplicador < 1.0) {
+                mensagem.append(" (Pouco efetivo... ×").append(multiplicador).append(")");
+            }
+            mensagem.append("\n");
+        } else {
+            mensagem.append("🛡️ Você defendeu o ataque!\n");
+        }
+        
+        resultado.mensagem = mensagem.toString();
+        resultado.danoJogador = danoAoJogador;
+        
+        // Verificar se o jogador morreu
+        if (!jogador.estaVivo()) {
+            resultado.batalhaTerminou = true;
+            resultado.derrota = true;
+        }
+        
+        return resultado;
+    }
     
     /**
      * Executa um turno de ataque na batalha
@@ -397,19 +495,32 @@ public class JogoController {
     public ResultadoBatalha finalizarBatalhaVitoria() {
         ResultadoBatalha resultado = new ResultadoBatalha();
         resultado.vitoria = true;
+        resultado.subiuNivel = false;
         
         StringBuilder mensagem = new StringBuilder();
         mensagem.append("🎉 VITÓRIA!\n");
         mensagem.append("Você derrotou ").append(inimigoAtual.getNome()).append("!\n\n");
         
         // Ganhar XP
-        int expGanha = inimigoAtual.getNivel() * 15;
+        int expGanha = inimigoAtual.getNivel() * 100;
         resultado.expGanha = expGanha;
+        boolean subiuNivel = jogador.ganharExperiencia(expGanha);
+        resultado.subiuNivel = subiuNivel;
         mensagem.append("💫 Ganhou ").append(expGanha).append(" pontos de experiência!\n");
+        mensagem.append("📊 EXP: ").append(jogador.getExperiencia()).append("/")
+                .append(jogador.getExpParaProximoNivel()).append("\n");
+        
+        if (subiuNivel) {
+            mensagem.append("\n⭐ LEVEL UP! Agora você é nível ").append(jogador.getNivel()).append("!\n");
+            mensagem.append("HP máximo aumentou!\n");
+            mensagem.append("Ataque e Defesa aumentaram!\n");
+        }
         
         // Recuperar vida
-        jogador.recuperarVida();
-        mensagem.append("❤️ Recuperou 5 pontos de vida!\n");
+        if (!subiuNivel) { // Só recupera 5 se não subiu de nível (level up já cura total)
+            jogador.recuperarVida();
+            mensagem.append("❤️ Recuperou 5 pontos de vida!\n");
+        }
         
         // Saquear itens
         List<Item> itens = inimigoAtual.getInventario().listarItensOrdenados();
@@ -425,8 +536,8 @@ public class JogoController {
             }
         }
         
-        // Chance de encontrar pista se for Rocket
-        if (batalhaComRocket && random.nextInt(100) < 40) {
+        // Chance de encontrar pista se for Rocket (só até 3 pistas)
+        if (batalhaComRocket && pistasEncontradas < PISTAS_PARA_RESGATE && random.nextInt(100) < 25) {
             pistasEncontradas++;
             mensagem.append("\n🔍 Você encontrou uma pista sobre o esconderijo da Equipe Rocket!\n");
             mensagem.append("Pistas: ").append(pistasEncontradas).append("/").append(PISTAS_PARA_RESGATE);
@@ -447,29 +558,65 @@ public class JogoController {
      * Usa um item do inventário
      */
     public String usarItem(Item item) {
+        return usarItem(item, false);
+    }
+    
+    /**
+     * Usa um item do inventário (em batalha ou fora)
+     */
+    public String usarItem(Item item, boolean emBatalha) {
         StringBuilder mensagem = new StringBuilder();
+        String nomeLower = item.getNome().toLowerCase();
+        String efeito = item.getEfeito().toLowerCase();
         
-        if (item.getNome().toLowerCase().contains("poção") || 
-            item.getNome().toLowerCase().contains("reviver")) {
+        // Itens de cura
+        if (nomeLower.contains("poção") || nomeLower.contains("pocao") || 
+            nomeLower.contains("reviver") || nomeLower.contains("elixir") ||
+            efeito.equals("cura") || efeito.equals("cura_maior")) {
             
             int vidaAntes = jogador.getPontosVida();
+            int vidaMax = jogador.getMaxPontosVida();
             
-            if (item.getNome().equals("Poção")) {
-                jogador.curarVida(20);
-            } else if (item.getNome().equals("Super Poção")) {
+            // Já está com vida cheia?
+            if (vidaAntes >= vidaMax) {
+                mensagem.append("⚠️ Sua vida já está no máximo! (")
+                        .append(vidaMax).append("/").append(vidaMax).append(")");
+                return mensagem.toString();
+            }
+            
+            // Determinar quanto cura
+            if (nomeLower.contains("super") || efeito.equals("cura_maior")) {
                 jogador.curarVida(50);
-            } else if (item.getNome().equals("Reviver")) {
-                jogador.curarVida(jogador.getMaxPontosVida());
+                mensagem.append("❤️ Você usou ").append(item.getNome()).append("!\n");
+            } else if (nomeLower.contains("reviver")) {
+                jogador.curarVida(vidaMax);
+                mensagem.append("💚 Você usou ").append(item.getNome()).append("!\n");
+            } else if (nomeLower.contains("elixir")) {
+                jogador.curarVida(vidaMax);
+                mensagem.append("✨ Você usou ").append(item.getNome()).append("!\n");
+            } else {
+                jogador.curarVida(20);
+                mensagem.append("❤️ Você usou ").append(item.getNome()).append("!\n");
             }
             
             int vidaCurada = jogador.getPontosVida() - vidaAntes;
-            mensagem.append("❤️ Você usou ").append(item.getNome()).append("!\n");
             mensagem.append("Recuperou ").append(vidaCurada).append(" pontos de vida!\n");
             mensagem.append("Vida: ").append(jogador.getPontosVida())
                     .append("/").append(jogador.getMaxPontosVida());
             
             // Remover item do inventário
             jogador.getInventario().removerItem(item);
+            
+        // Antídotos (futuramente pode ter status de envenenamento)
+        } else if (nomeLower.contains("antídoto") || nomeLower.contains("antidoto") || 
+                   efeito.equals("antidoto")) {
+            mensagem.append("💊 Você usou ").append(item.getNome()).append("!\n");
+            mensagem.append("Você se sente revigorado!\n");
+            mensagem.append("(Nenhum efeito negativo ativo no momento)");
+            
+            // Ainda assim remove o item
+            jogador.getInventario().removerItem(item);
+            
         } else {
             mensagem.append("⚠️ Este item não pode ser usado agora.");
         }
@@ -481,11 +628,11 @@ public class JogoController {
      * Inicia a batalha final contra Giovanni
      */
     public Inimigo iniciarBatalhaFinal() {
-        inimigoAtual = new Inimigo("Giovanni (Líder da Equipe Rocket)",
-                                    200,
-                                    25,
-                                    15,
-                                    20);
+        inimigoAtual = new Inimigo("Giovanni (L\u00edder da Equipe Rocket)",
+                                    350,  // HP muito alto
+                                    40,   // Ataque forte
+                                    25,   // Defesa s\u00f3lida
+                                    35);  // N\u00edvel 35 (boss forte)
         
         // Adicionar itens ao inventário do Giovanni
         inimigoAtual.getInventario().adicionarItem(new Item("Super Poção", "Recupera 50 pontos de vida", "cura", 3));

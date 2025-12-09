@@ -1,6 +1,8 @@
 package rpg.personagem.pokemon;
 
 import rpg.personagem.Personagem;
+import rpg.poderes.PoderPresets;
+import rpg.poderes.Poder;
 
 public class PokemonPedra extends Personagem {
 
@@ -12,6 +14,13 @@ public class PokemonPedra extends Personagem {
         super(nome, 120 + nivel * 10, 12 + nivel * 2, 15 + nivel, nivel);
         this.origem = "pokemon";
         this.tipo = "pedra";
+        
+        // Adicionar poderes de pedra baseados no nível
+        for (Poder p : PoderPresets.getPoderes()) {
+            if (p.getId().startsWith("pedra") && nivel >= p.getNivelMinimo()) {
+                this.poderes.add(p);
+            }
+        }
     }
 
     public PokemonPedra(PokemonPedra outro) {

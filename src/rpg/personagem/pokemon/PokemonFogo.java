@@ -1,6 +1,8 @@
 package rpg.personagem.pokemon;
 
 import rpg.personagem.Personagem;
+import rpg.poderes.PoderPresets;
+import rpg.poderes.Poder;
 
 public class PokemonFogo extends Personagem {
 
@@ -9,9 +11,16 @@ public class PokemonFogo extends Personagem {
     }
 
     public PokemonFogo(String nome, int nivel) {
-        super(nome, 90 + nivel * 7, 18 + nivel * 3, 8 + nivel, nivel);
+        super(nome, 100 + nivel * 8, 17 + nivel * 2, 8 + nivel, nivel);
         this.origem = "pokemon";
         this.tipo = "fogo";
+        
+        // Adicionar poderes de fogo baseados no nível
+        for (Poder p : PoderPresets.getPoderes()) {
+            if (p.getId().startsWith("fogo") && nivel >= p.getNivelMinimo()) {
+                this.poderes.add(p);
+            }
+        }
     }
 
     public PokemonFogo(PokemonFogo outro) {

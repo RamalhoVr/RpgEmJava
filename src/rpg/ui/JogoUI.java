@@ -28,9 +28,12 @@ public class JogoUI extends JFrame {
     private JLabel labelVida;
     private JLabel labelNivel;
     private JLabel labelPistas;
+    private JLabel labelXP;
     private JProgressBar barraVida;
+    private JProgressBar barraXP;
     private MapaVisual mapaVisual;
     private JDialog dialogoMapa;
+    private boolean batalhaFinalEmAndamento = false;
     
     // Botões de ação
     private JButton btnExplorar;
@@ -91,7 +94,7 @@ public class JogoUI extends JFrame {
      */
     private JPanel criarPainelStatus() {
         JPanel painel = new JPanel();
-        painel.setLayout(new GridLayout(2, 1, 5, 5));
+        painel.setLayout(new GridLayout(3, 1, 5, 5));
         painel.setBorder(BorderFactory.createTitledBorder("Status do Jogador"));
         painel.setBackground(new Color(240, 240, 240));
         
@@ -125,8 +128,23 @@ public class JogoUI extends JFrame {
         linha2.add(labelVida, BorderLayout.WEST);
         linha2.add(barraVida, BorderLayout.CENTER);
         
+        // Linha 3: Barra de XP
+        JPanel linha3 = new JPanel(new BorderLayout(5, 0));
+        linha3.setBackground(new Color(240, 240, 240));
+        labelXP = new JLabel("EXP: " + jogador.getExperiencia() + "/" + jogador.getExpParaProximoNivel());
+        labelXP.setFont(new Font("Arial", Font.PLAIN, 14));
+        
+        barraXP = new JProgressBar(0, jogador.getExpParaProximoNivel());
+        barraXP.setValue(jogador.getExperiencia());
+        barraXP.setStringPainted(true);
+        barraXP.setForeground(new Color(33, 150, 243)); // Azul
+        
+        linha3.add(labelXP, BorderLayout.WEST);
+        linha3.add(barraXP, BorderLayout.CENTER);
+        
         painel.add(linha1);
         painel.add(linha2);
+        painel.add(linha3);
         
         return painel;
     }
@@ -215,9 +233,13 @@ public class JogoUI extends JFrame {
         labelNivel.setText("Nível: " + jogador.getNivel());
         labelVida.setText("Vida: " + jogador.getPontosVida() + "/" + jogador.getMaxPontosVida());
         labelPistas.setText("Pistas: " + controller.getPistasEncontradas() + "/" + controller.getPistasNecessarias());
+        labelXP.setText("EXP: " + jogador.getExperiencia() + "/" + jogador.getExpParaProximoNivel());
         
         barraVida.setMaximum(jogador.getMaxPontosVida());
         barraVida.setValue(jogador.getPontosVida());
+        
+        barraXP.setMaximum(jogador.getExpParaProximoNivel());
+        barraXP.setValue(jogador.getExperiencia());
         
         // Mudar cor da barra conforme a vida
         int vidaPercentual = (jogador.getPontosVida() * 100) / jogador.getMaxPontosVida();
@@ -362,7 +384,14 @@ public class JogoUI extends JFrame {
     
     private void mostrarDialogoBatalha(Inimigo inimigo) {
         while (controller.isEmBatalha() && jogador.estaVivo() && inimigo.estaVivo()) {
-            String[] opcoes = {"⚔️ Atacar", "🏃 Fugir"};
+            // Opções de batalha dependem se é Pokemon ou não
+            String[] opcoes;
+            if (jogador.getOrigem().equals("pokemon") && !jogador.getPoderes().isEmpty()) {
+                opcoes = new String[]{"⚔️ Atacar", "✨ Poder", "📦 Item", "🏃 Fugir"};
+            } else {
+                opcoes = new String[]{"⚔️ Atacar", "📦 Item", "🏃 Fugir"};
+            }
+            
             int escolha = JOptionPane.showOptionDialog(
                 this,
                 "O que deseja fazer?\n\n" +
@@ -376,6 +405,8 @@ public class JogoUI extends JFrame {
                 opcoes[0]
             );
             
+            if (escolha == -1) escolha = opcoes.length - 1; // X = Fugir
+            
             if (escolha == 0) {
                 // Atacar
                 ResultadoTurno turno = controller.atacar();
@@ -385,6 +416,16 @@ public class JogoUI extends JFrame {
                 if (turno.vitoria) {
                     ResultadoBatalha resultadoBatalha = controller.finalizarBatalhaVitoria();
                     adicionarTexto("\n" + resultadoBatalha.mensagem);
+                    
+                    // Popup de Level Up (antes dos itens)
+                    if (resultadoBatalha.subiuNivel) {
+                        NotificacaoPopup.mostrarSucesso(
+                            this,
+                            "⭐ LEVEL UP!",
+                            "Você subiu para o nível " + jogador.getNivel() + "!\n" +
+                            "HP, Ataque e Defesa aumentaram!"
+                        );
+                    }
                     
                     // Mostrar itens ganhos com popups
                     if (!resultadoBatalha.itensGanhos.isEmpty()) {
@@ -408,6 +449,135 @@ public class JogoUI extends JFrame {
                     atualizarStatus();
                     break;
                 }
+            } else if (jogador.getOrigem().equals("pokemon") && !jogador.getPoderes().isEmpty() && escolha == 1) {
+                // Poder (só Pokemon)
+                List<rpg.poderes.Poder> poderes = jogador.getPoderes();
+                String[] nomesPoderes = poderes.stream()
+                        .map(p -> p.getNome() + " (Nv" + p.getNivelMinimo() + ")")
+                        .toArray(String[]::new);
+                
+                String poderEscolhido = (String) JOptionPane.showInputDialog(
+                    this,
+                    "Escolha um poder:",
+                    "Usar Poder",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    nomesPoderes,
+                    nomesPoderes[0]
+                );
+                
+                if (poderEscolhido != null) {
+                    int idx = java.util.Arrays.asList(nomesPoderes).indexOf(poderEscolhido);
+                    rpg.poderes.Poder poder = poderes.get(idx);
+                    
+                    ResultadoTurno turno = controller.usarPoder(poder);
+                    adicionarTexto(turno.mensagem);
+                    atualizarStatus();
+                    
+                    if (turno.vitoria) {
+                        ResultadoBatalha resultadoBatalha = controller.finalizarBatalhaVitoria();
+                        adicionarTexto("\n" + resultadoBatalha.mensagem);
+                        
+                        if (resultadoBatalha.subiuNivel) {
+                            NotificacaoPopup.mostrarSucesso(
+                                this,
+                                "⭐ LEVEL UP!",
+                                "Você subiu para o nível " + jogador.getNivel() + "!\n" +
+                                "HP, Ataque e Defesa aumentaram!"
+                            );
+                        }
+                        
+                        if (!resultadoBatalha.itensGanhos.isEmpty()) {
+                            for (Item item : resultadoBatalha.itensGanhos) {
+                                NotificacaoPopup.mostrarItemGanho(this, item.getNome(), item.getQuantidade());
+                            }
+                        }
+                        
+                        NotificacaoPopup.mostrarSucesso(
+                            this,
+                            "🎉 Vitória!",
+                            "Você derrotou " + inimigo.getNome() + "!\n" +
+                            "EXP ganho: " + resultadoBatalha.expGanha
+                        );
+                        
+                        atualizarStatus();
+                        break;
+                    } else if (turno.derrota) {
+                        adicionarTexto("\n💀 Você foi derrotado!");
+                        atualizarStatus();
+                        break;
+                    }
+                }
+                continue; // Volta ao menu se cancelou
+                
+            } else if ((jogador.getOrigem().equals("pokemon") && !jogador.getPoderes().isEmpty() && escolha == 2) ||
+                       ((!jogador.getOrigem().equals("pokemon") || jogador.getPoderes().isEmpty()) && escolha == 1)) {
+                // Item
+                List<Item> itens = jogador.getInventario().listarItensOrdenados();
+                if (itens.isEmpty()) {
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Você não tem itens no inventário!",
+                        "Sem Itens",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+                    continue;
+                }
+                
+                String[] nomesItens = itens.stream()
+                        .map(i -> i.getNome() + " x" + i.getQuantidade())
+                        .toArray(String[]::new);
+                
+                String itemEscolhido = (String) JOptionPane.showInputDialog(
+                    this,
+                    "Escolha um item:",
+                    "Usar Item",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    nomesItens,
+                    nomesItens[0]
+                );
+                
+                if (itemEscolhido != null) {
+                    int idx = java.util.Arrays.asList(nomesItens).indexOf(itemEscolhido);
+                    Item item = itens.get(idx);
+                    
+                    String resultado = controller.usarItem(item, true);
+                    adicionarTexto("\n" + resultado);
+                    atualizarStatus();
+                    
+                    // Turno do inimigo após usar item
+                    if (controller.isEmBatalha() && inimigo.estaVivo()) {
+                        ResultadoTurno turnoInimigo = new ResultadoTurno("");
+                        // Simular contra-ataque do inimigo
+                        java.util.Random rand = new java.util.Random();
+                        int dadoInimigo = rand.nextInt(6) + 1;
+                        int ataqueInimigo = inimigo.atacar() + dadoInimigo;
+                        int defesaJogador = jogador.getDefesa();
+                        
+                        StringBuilder msg = new StringBuilder();
+                        msg.append("\n--- Turno do inimigo ---\n");
+                        msg.append("🎲 ").append(inimigo.getNome()).append(" rolou ").append(dadoInimigo).append("\n");
+                        
+                        if (ataqueInimigo > defesaJogador) {
+                            int dano = ataqueInimigo - defesaJogador;
+                            jogador.receberDano(dano);
+                            msg.append("💔 Você recebeu ").append(dano).append(" de dano!\n");
+                        } else {
+                            msg.append("🛡️ Você defendeu!\n");
+                        }
+                        
+                        adicionarTexto(msg.toString());
+                        atualizarStatus();
+                        
+                        if (!jogador.estaVivo()) {
+                            adicionarTexto("\n💀 Você foi derrotado!");
+                            break;
+                        }
+                    }
+                }
+                continue;
+                
             } else {
                 // Fugir
                 ResultadoBatalha resultado = controller.tentarFugir();
@@ -423,8 +593,8 @@ public class JogoUI extends JFrame {
         btnMapa.setEnabled(true);
         atualizarStatus();
         
-        // Reabrir mapa se estava navegando
-        if (dialogoMapa != null && !dialogoMapa.isVisible() && jogador.estaVivo()) {
+        // Reabrir mapa se estava navegando (exceto na batalha final)
+        if (!batalhaFinalEmAndamento && dialogoMapa != null && !dialogoMapa.isVisible() && jogador.estaVivo()) {
             SwingUtilities.invokeLater(() -> {
                 mapaVisual.atualizarEstadoNodes();
                 dialogoMapa.setVisible(true);
@@ -433,6 +603,8 @@ public class JogoUI extends JFrame {
     }
     
     private void iniciarBatalhaFinal() {
+        batalhaFinalEmAndamento = true;
+        
         adicionarTexto("\n" + "=".repeat(50));
         adicionarTexto("🏆 BATALHA FINAL - LÍDER DA EQUIPE ROCKET!");
         adicionarTexto("=".repeat(50));
@@ -458,6 +630,8 @@ public class JogoUI extends JFrame {
                 JOptionPane.INFORMATION_MESSAGE
             );
         }
+        
+        batalhaFinalEmAndamento = false;
     }
     
     private void acaoVerStatus() {
